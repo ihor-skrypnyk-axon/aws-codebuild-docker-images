@@ -232,7 +232,7 @@ VOLUME /var/lib/docker
 #=======================End of layer: corretto  =================
 
 # Activate runtime versions specific to image version.
-RUN n $NODE_12_VERSION
+RUN n $NODE_14_VERSION
 RUN pyenv  global $PYTHON_38_VERSION
 
 # Configure SSH
