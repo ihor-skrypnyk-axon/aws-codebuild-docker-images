@@ -230,18 +230,10 @@ VOLUME /var/lib/docker
 #*********************** END  DOCKER  ****************************
 
 #=======================End of layer: corretto  =================
-FROM runtimes_n_corretto AS std_v4
-
-# GoLang 14
-ENV GOLANG_14_VERSION="1.14.12"
-RUN goenv install $GOLANG_14_VERSION; rm -rf /tmp/*; \
-    goenv global  $GOLANG_14_VERSION
 
 # Activate runtime versions specific to image version.
 RUN n $NODE_12_VERSION
 RUN pyenv  global $PYTHON_38_VERSION
-RUN phpenv global $PHP_74_VERSION
-RUN rbenv  global $RUBY_27_VERSION
 
 # Configure SSH
 COPY ssh_config /root/.ssh/config
