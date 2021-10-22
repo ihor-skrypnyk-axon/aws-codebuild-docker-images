@@ -59,46 +59,6 @@ RUN useradd codebuild-user
 
 FROM core AS tools
 
-# Install Firefox
-RUN set -ex \
-    && apt-add-repository -y "deb http://archive.canonical.com/ubuntu $(lsb_release -sc) partner" \
-    && apt-add-repository -y ppa:malteworld/ppa && apt-get update \
-    && apt-get install -y libgtk-3-0 libglib2.0-0 libdbus-glib-1-2 libdbus-1-3 libasound2 \
-    && wget -nv -O ~/FirefoxSetup.tar.bz2 "https://download.mozilla.org/?product=firefox-latest&os=linux64" \
-    && tar xjf ~/FirefoxSetup.tar.bz2 -C /opt/ \
-    && ln -s /opt/firefox/firefox /usr/local/bin/firefox \
-    && rm ~/FirefoxSetup.tar.bz2 \
-    && firefox --version
-
-# Install GeckoDriver
-RUN set -ex \
-    && curl -s https://api.github.com/repos/mozilla/geckodriver/releases/latest | jq -r '.assets[] | select(.browser_download_url | endswith("linux64.tar.gz")).browser_download_url' | wget -O /tmp/geckodriver-latest-linux64.tar.gz -qi - \
-    && tar -xzf /tmp/geckodriver-latest-linux64.tar.gz -C /opt \
-    && rm /tmp/geckodriver-latest-linux64.tar.gz \
-    && chmod 755 /opt/geckodriver \
-    && ln -s /opt/geckodriver /usr/bin/geckodriver \
-    && geckodriver --version
-
-# Install Chrome
-RUN set -ex \
-    && curl --silent --show-error --location --fail --retry 3 --output /tmp/google-chrome-stable_current_amd64.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-    && (dpkg -i /tmp/google-chrome-stable_current_amd64.deb || apt-get -fy install) \
-    && rm -rf /tmp/google-chrome-stable_current_amd64.deb \
-    && sed -i 's|HERE/chrome"|HERE/chrome" --disable-setuid-sandbox --no-sandbox|g' "/opt/google/chrome/google-chrome" \
-    && google-chrome --version
-
-# Install ChromeDriver
-RUN set -ex \
-    && CHROME_VERSION=`google-chrome --version | awk -F '[ .]' '{print $3"."$4"."$5}'` \
-    && CHROME_DRIVER_VERSION=`wget -nv -qO- chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION` \
-    && wget -nv -O /tmp/chromedriver_linux64.zip https://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip \
-    && unzip /tmp/chromedriver_linux64.zip -d /opt \
-    && rm /tmp/chromedriver_linux64.zip \
-    && mv /opt/chromedriver /opt/chromedriver-$CHROME_DRIVER_VERSION \
-    && chmod 755 /opt/chromedriver-$CHROME_DRIVER_VERSION \
-    && ln -s /opt/chromedriver-$CHROME_DRIVER_VERSION /usr/bin/chromedriver \
-    && chromedriver --version
-
 # Install stunnel
 RUN set -ex \
    && STUNNEL_VERSION=5.56 \
@@ -116,20 +76,6 @@ RUN set -ex \
    && cat key.pem cert.pem >> /usr/local/etc/stunnel/stunnel.pem \
    && cd .. ; rm -rf stunnel-${STUNNEL_VERSION}*
 
-# AWS Tools
-# https://docs.aws.amazon.com/eks/latest/userguide/install-aws-iam-authenticator.html https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_CLI_installation.html
-RUN curl -sS -o /usr/local/bin/aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.16.8/2020-04-16/bin/linux/amd64/aws-iam-authenticator \
-    && curl -sS -o /usr/local/bin/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.16.8/2020-04-16/bin/linux/amd64/kubectl \
-    && curl -sS -o /usr/local/bin/ecs-cli https://s3.amazonaws.com/amazon-ecs-cli/ecs-cli-linux-amd64-latest \
-    && curl -sS -L https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz | tar xz -C /usr/local/bin \
-    && chmod +x /usr/local/bin/kubectl /usr/local/bin/aws-iam-authenticator /usr/local/bin/ecs-cli /usr/local/bin/eksctl
-
-# Configure SSM
-RUN set -ex \
-    && mkdir /tmp/ssm \
-    && cd /tmp/ssm \
-    && wget https://s3.amazonaws.com/amazon-ssm-us-east-1/3.0.1390.0/debian_amd64/amazon-ssm-agent.deb \
-    && dpkg -i amazon-ssm-agent.deb
 
 #nodejs
 ENV SRC_DIR="/usr/src"
@@ -141,7 +87,6 @@ RUN git clone https://github.com/tj/n $N_SRC_DIR \
 RUN curl https://pyenv.run | bash
 ENV PATH="/root/.pyenv/shims:/root/.pyenv/bin:$PATH"
 
-#=======================End of layer: tools  =================
 FROM tools AS runtimes
 
 
@@ -228,8 +173,6 @@ RUN set -ex \
 
 VOLUME /var/lib/docker
 #*********************** END  DOCKER  ****************************
-
-#=======================End of layer: corretto  =================
 
 # Activate runtime versions specific to image version.
 RUN n $NODE_14_VERSION
